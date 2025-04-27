@@ -1,8 +1,10 @@
 package com.example.homarr
 
+import android.app.Activity
 import android.app.DownloadManager
 import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -10,24 +12,29 @@ import android.provider.MediaStore
 import android.util.Log
 import android.webkit.CookieManager
 import android.webkit.URLUtil
+import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.webkit.ValueCallback
+import android.webkit.WebChromeClient.FileChooserParams
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLDecoder
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import androidx.appcompat.app.AppCompatActivity
 import java.io.FileNotFoundException
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
+    private var filePathCallback: ValueCallback<Array<Uri>>? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,6 +47,18 @@ class MainActivity : AppCompatActivity() {
         webView.settings.domStorageEnabled = true
 
         webView.webViewClient = WebViewClient()
+        webView.webChromeClient = object : WebChromeClient() {
+            override fun onShowFileChooser(
+                view: WebView?,
+                filePathCallback: ValueCallback<Array<Uri>>?,
+                fileChooserParams: FileChooserParams?
+            ): Boolean {
+                // Hier wird der Typ des File-Path-Callbacks explizit angegeben.
+                this@MainActivity.filePathCallback = filePathCallback
+                openFileChooser()
+                return true
+            }
+        }
 
         webView.loadUrl("http://10.0.0.1:7575") // Landing-Page
 
@@ -56,6 +75,25 @@ class MainActivity : AppCompatActivity() {
                 startDownload(url, userAgent, contentDisposition, mimetype, cookies)
             }
         }
+    }
+
+    private val fileChooserLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                val data: Intent? = result.data
+                val uri = data?.data
+                filePathCallback?.onReceiveValue(if (uri != null) arrayOf(uri) else emptyArray())
+            } else {
+                filePathCallback?.onReceiveValue(null)
+            }
+        }
+
+    private fun openFileChooser() {
+        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "*/*" // Alle Dateitypen erlauben
+        }
+        fileChooserLauncher.launch(intent)
     }
 
     @RequiresApi(Build.VERSION_CODES.Q)
@@ -127,5 +165,4 @@ class MainActivity : AppCompatActivity() {
         val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         dm.enqueue(request)
     }
-
 }
