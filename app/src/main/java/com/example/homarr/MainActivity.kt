@@ -17,6 +17,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient.FileChooserParams
+import android.webkit.WebSettings
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
@@ -45,6 +46,10 @@ class MainActivity : AppCompatActivity() {
         webView.settings.javaScriptEnabled = true
         webView.settings.allowFileAccess = true
         webView.settings.domStorageEnabled = true
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            webView.settings.forceDark = WebSettings.FORCE_DARK_ON
+        }
 
         webView.webViewClient = WebViewClient()
         webView.webChromeClient = object : WebChromeClient() {
@@ -165,4 +170,13 @@ class MainActivity : AppCompatActivity() {
         val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         dm.enqueue(request)
     }
+
+    override fun onBackPressed() {
+        if (webView.canGoBack()) {
+            webView.goBack()
+        } else {
+            super.onBackPressed()
+        }
+    }
+
 }
