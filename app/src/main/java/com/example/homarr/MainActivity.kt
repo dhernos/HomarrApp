@@ -8,16 +8,11 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
-import android.webkit.CookieManager
-import android.webkit.URLUtil
-import android.webkit.WebChromeClient
-import android.webkit.WebView
+import android.webkit.*
 import android.webkit.WebViewClient
-import android.webkit.ValueCallback
-import android.webkit.WebChromeClient.FileChooserParams
-import android.webkit.WebSettings
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
@@ -30,7 +25,7 @@ import java.io.OutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLDecoder
-import java.io.FileNotFoundException
+import android.view.KeyEvent
 
 class MainActivity : AppCompatActivity() {
 
@@ -43,15 +38,31 @@ class MainActivity : AppCompatActivity() {
         webView = WebView(this)
         setContentView(webView)
 
-        webView.settings.javaScriptEnabled = true
-        webView.settings.allowFileAccess = true
-        webView.settings.domStorageEnabled = true
+        val settings = webView.settings
+        settings.javaScriptEnabled = true
+        settings.allowFileAccess = true
+        settings.domStorageEnabled = true
+        settings.cacheMode = WebSettings.LOAD_DEFAULT
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             webView.settings.forceDark = WebSettings.FORCE_DARK_ON
         }
 
-        webView.webViewClient = WebViewClient()
+        val cookieManager = CookieManager.getInstance()
+        cookieManager.setAcceptCookie(true)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            cookieManager.setAcceptThirdPartyCookies(webView, true)
+        }
+
+        webView.webViewClient = object : WebViewClient() {
+            override fun onPageFinished(view: WebView?, url: String?) {
+                super.onPageFinished(view, url)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    CookieManager.getInstance().flush()
+                }
+            }
+        }
+
         webView.webChromeClient = object : WebChromeClient() {
             override fun onShowFileChooser(
                 view: WebView?,
@@ -178,5 +189,13 @@ class MainActivity : AppCompatActivity() {
             super.onBackPressed()
         }
     }
+    override fun onKeyLongPress(keyCode: Int, event: KeyEvent): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            webView.loadUrl("http://10.0.0.1:7575") // Startseite
+            return true
+        }
+        return super.onKeyLongPress(keyCode, event)
+    }
+
 
 }
