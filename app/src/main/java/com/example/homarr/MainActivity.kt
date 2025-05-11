@@ -40,6 +40,7 @@ class MainActivity : AppCompatActivity() {
 
         val settings = webView.settings
         settings.javaScriptEnabled = true
+        webView.settings.userAgentString = "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36"
         settings.allowFileAccess = true
         settings.domStorageEnabled = true
         settings.cacheMode = WebSettings.LOAD_DEFAULT
